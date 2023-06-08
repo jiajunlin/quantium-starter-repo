@@ -1,4 +1,5 @@
 from dash import Dash, dcc, html
+from dash.dependencies import Input, Output
 import plotly.express as px
 import pandas as pd
 import csv
@@ -30,6 +31,7 @@ def load_data():
 
                 # Add the row to the list
                 data.append([sales, date, region])
+
     return pd.DataFrame(data, columns=["Sales", "Dates", "Region"])
 
 
@@ -77,11 +79,65 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
         'color': colors['text']
     }),
 
+    html.Br(),
+
+    html.Div(children=[
+        html.Label("Filter with callback"),
+        dcc.RadioItems(
+            id='region-filter',  # assign an ID to the Radio items component
+            options=[
+                {'label': 'North', 'value': 'north'},
+                {'label': 'South', 'value': 'south'},
+                {'label': 'East', 'value': 'east'},
+                {'label': 'West', 'value': 'west'},
+                {'label': 'All', 'value': 'all'}
+            ],
+            value='all'
+        )
+    ],
+        style={
+            'textAlign': 'center',
+            'color': colors['text']
+        }
+    ),
+
     dcc.Graph(
         id='example-graph-2',
         figure=fig
     )
 ])
+
+
+@app.callback(
+    Output('example-graph-2', 'figure'),
+    [Input('region-filter', 'value')]
+)
+def update_graph(selected):
+    if selected == 'all':
+        filtered_df = df
+    else:
+        filtered_df = df[df['Region'] == selected]
+
+    fig1 = px.line(filtered_df, x="Dates", y="Sales")
+
+    fig1.update_layout(
+        plot_bgcolor=colors['background'],
+        paper_bgcolor=colors['background'],
+        font_color=colors['text'],
+        showlegend=True
+    )
+
+    # Add a vertical line to show the date increased price
+    fig1.add_shape(
+        type="line",
+        x0="2021-01-15",
+        y0=filtered_df["Sales"].min(),
+        x1="2021-01-15",
+        y1=filtered_df["Sales"].max(),
+        line=dict(color="red", width=1, dash="dash"),
+    )
+    return fig1
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
